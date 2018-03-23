@@ -440,13 +440,12 @@ def alter_kmt_lengths(outfile, distance_nm, newfile):
 def cen_cen_distances(outfile):
     """Returns a numpy array of the cen-cen distances in models with kmts added"""
     import numpy as np
-    import chromoSnake as cs
     import re
 
     #going to need to grab the centromere data
     #the centromeres will be attached to the kmt beads via springs
     #we can grab the kmt ids using super_mass_indexes
-    mass_idx = list(cs.super_mass_indexs(outfile))
+    mass_idx = list(super_mass_indexs(outfile))
     #loop through the config header portion of the outfile to grab spring lines
     spring_re = re.compile('^spring')
     cens = []
@@ -461,7 +460,7 @@ def cen_cen_distances(outfile):
                 elif mass2 in mass_idx:
                     cens.append(mass1)
     #Since chromoshake flips the bead order upon printout we need to convert config indices to timeline indices
-    num_masses = cs.number_of_masses(outfile)
+    num_masses = number_of_masses(outfile)
     cens_idx = [str((num_masses - 1) - int(cen)) for cen in cens]
     #new re-loop through file and pull out the coordinates FROM THE TIME/COORD section NOT the header
     cnt = 0
@@ -497,3 +496,41 @@ def cohesin_mass_idxs(config_file):
                 split_line = line.split()
                 cohesin_idxs.append(split_line[1])
     return(cohesin_idxs)
+
+def alter_persistence_length(outfile, newfile, Lp_nm, d_nm=10):
+    """This function alters the persistence length of a simulation
+    by changing the hinge force constant"""
+    #By default the mass separation in all chromoShake configuration
+    #files is 10 nm. So I am going to default this program to assume
+    #a mass separation of 10 nm
+    import re
+    
+    #define Boltzmann constant
+    Kb = float(1.3806488e-23)
+    #grab temperature from simulation as that effects persistence length
+    Tc_re = re.compile('^meta temperature_Celsius ')
+    with open(outfile) as f:
+        for line in f:
+            if Tc_re.search(line.strip()):
+                Tc = line.strip().split()[-1]
+    #convert Tc, EGpa, d_nm, and Lp_nm to SI units
+    T = float(Tc) + float(273.15)
+    Lp = float(Lp_nm) * float(1e-9)
+    d = float(d_nm) * (float(1e-9))
+    #calculate the B from the Lp_nm given T, E and d
+    B = Lp * T * Kb
+    #calculate the hinge force constant from B
+    Kh = 2 * B / float(d**2)
+    #open newfile and loop through old file writing newfile line by line
+    h_re = re.compile('^hinge ')
+    nf = open(newfile, 'w')
+    with open(outfile) as f:
+        for line in f:
+            if h_re.search(line.strip()):
+                mass1 = line.strip().split()[1]
+                mass2 = line.strip().split()[2]
+                mass3 = line.strip().split()[3]
+                nf.write('hinge ' + mass1 + ' ' + mass2 + ' ' + mass3 + ' ' + str(format(Kh, '.5g')) + '\n')
+            else:
+                nf.write(line.strip()+'\n')
+    nf.close()
