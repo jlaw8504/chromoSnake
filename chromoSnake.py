@@ -186,7 +186,7 @@ def most_proximal_bead_list(coords):
                 min_idx = min_idx_del
             tuple_list.append((idx,min_idx))
             idx_list.append(min_idx)
-    return(tuple_list)
+    return tuple_list
 
 def new_centromere_positions(coords, tuple_list):
     import numpy as np
@@ -207,7 +207,7 @@ def new_centromere_positions(coords, tuple_list):
         new_bead = np.append(new_xy, new_z)
         new_beads[row] = new_bead
         row = row + 1
-    return(new_beads)
+    return new_beads
 
 def new_kmt_positions(coords, tuple_list, distance):
     import numpy as np
@@ -228,7 +228,7 @@ def new_kmt_positions(coords, tuple_list, distance):
         new_bead = np.append(new_xy, new_z)
         new_beads[row] = new_bead
         row = row + 1
-    return(new_beads)
+    return new_beads
 
 def get_mass_separation(config_file):
     """Parse the configuration for the mass separation"""
@@ -242,7 +242,7 @@ def get_mass_separation(config_file):
                 if len(split_line) == 5:
                     mass_sep = split_line[3]
                     break
-    return(mass_sep)
+    return mass_sep
 
 def get_spring_constant(config_file):
     """Parse the configuration file for the spring constant and return it as a string"""
@@ -256,7 +256,7 @@ def get_spring_constant(config_file):
                 if len(split_line) == 5:
                     ks = split_line[4]
                     break
-    return(float(ks))
+    return float(ks)
 
 def centromere_spring_list(config_file):
     """Generate a master list containing two spring lines for every centromere mass"""
@@ -275,7 +275,7 @@ def centromere_spring_list(config_file):
         spring_lines.append('spring ' + str(bead_idxs[pair[1]]) + ' ' + str(mass_num) + ' ' + mass_sep + ' ' + str(ks) + ' \n')
         spring_lines_list.append(spring_lines)
         mass_num = mass_num + 1
-    return(spring_lines_list)
+    return spring_lines_list
 
 def get_hinge_force(config_file):
     """Parse hinge force from a configuration file and return it as a string"""
@@ -289,7 +289,7 @@ def get_hinge_force(config_file):
                 if len(line_split) == 5:
                     hinge_force = line_split[-1]
                     break
-    return(hinge_force)
+    return hinge_force
                 
 def super_partner_dict(config_file):
     """Returns a dictionary with super massive bead indices as keys and the
@@ -308,7 +308,7 @@ def super_partner_dict(config_file):
                 elif line.split()[2] in bead_idxs:
                     partner_idxs.append(line.split()[1])
     partner_dict = dict(zip(bead_idxs, partner_idxs))
-    return(partner_dict)
+    return partner_dict
 
 def centromere_hinge_list(config_file):
     """Generate a master list of two hinge lines for every centromere mass"""
@@ -328,7 +328,7 @@ def centromere_hinge_list(config_file):
         hinge_lines.append('hinge ' + str(bead_idxs[pair[0]]) + ' ' + str(bead_idxs[pair[1]]) + ' ' + str(mass_num) + ' ' + hinge_force + ' \n')
         hinge_lines_list.append(hinge_lines)
         mass_num = mass_num + 1
-    return(hinge_lines_list)
+    return hinge_lines_list
 
 def add_centromeres_spindle(config_file, altered_file, distance):
     """Parse a configuration file of a spindle simulation and create an altered configuration file with centromeres added"""
@@ -481,7 +481,7 @@ def cen_cen_distances(outfile):
     dists = []
     for cen in range(int(len(cens)/2)):
         dists.append(np.linalg.norm(np.array(cen_coords[cen]).astype('float')-np.array(cen_coords[cen+15]).astype('float')))
-    return(np.array(dists))
+    return np.array(dists)
 
 def cohesin_mass_idxs(config_file):
     """Search a spindle config file for cohesin masses assuming cohesin masses are only white/5 beads"""
@@ -495,7 +495,7 @@ def cohesin_mass_idxs(config_file):
             if start_re.search(line) and end_re.search(line):
                 split_line = line.split()
                 cohesin_idxs.append(split_line[1])
-    return(cohesin_idxs)
+    return cohesin_idxs
 
 def alter_persistence_length(outfile, newfile, Lp_nm, d_nm=10):
     """This function alters the persistence length of a simulation
