@@ -6,10 +6,13 @@ from mpl_toolkits.mplot3d import Axes3D
 
 # noinspection SpellCheckingInspection
 mySim = cG.ChromoSim('/home/test/Documents/chromoShake/bin/Video/WTspindle_0_5_first.out')
-mass_list, spring_list, hinge_list = mySim.parse_header()
-mass_array = np.array(mass_list)
-spring_array = np.array(spring_list)
-hinge_array = np.array(hinge_list)
+mass_array = np.array(mySim.mass_list)
+spring_array = np.array(mySim.spring_list)
+hinge_array = np.array(mySim.hinge_list)
+super_mass_indexes = mySim.super_mass_indexes
+condensin_spring_indexes = mySim.condensin_spring_indexes
+condensin_array = spring_array[condensin_spring_indexes, :]
+print(condensin_array.shape)
 
 fig = plt.figure()
 ax = Axes3D(fig)

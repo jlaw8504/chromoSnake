@@ -2,12 +2,16 @@ class ChromoSim:
     """
     A class containing a reference to a chromoShake simulation
     """
-    def __init__(self, filepath):
+
+    def __init__(self, filepath, SUPER_MASS=None):
         try:
             open(filepath)
         except IOError as err:
             print(err)
         self.filepath = filepath
+        self.mass_list, self.spring_list, self.hinge_list = self.parse_header()
+        self.super_mass_indexes = self.get_super_masses()
+        self.condensin_spring_indexes = self.get_condensin_springs()
 
     def parse_header(self):
         import re
@@ -56,3 +60,36 @@ class ChromoSim:
                     f.close()
                     break
         return mass_list, spring_list, hinge_list
+
+    def get_super_masses(self, SUPER_MASS=None):
+        """
+        Identify super masses
+        params:
+            super_mass : A numpy double constant
+        returns: A numpy array of boolean values to index mass_list
+        """
+        import numpy as np
+
+        mass_array = np.array(self.mass_list)
+        mass_masses = mass_array[:, 2].astype(np.double)
+        if SUPER_MASS is not None and SUPER_MASS.dtype.name == 'float64':
+            super_masses = mass_masses == SUPER_MASS
+        else:
+            super_mass_indexes = mass_masses == mass_masses.max()
+
+        return super_mass_indexes
+
+    def get_condensin_springs(self):
+        """
+        Identify condensin springs
+        params: None
+        returns: A numpy array of boolean values to index spring_list
+        """
+        import numpy as np
+
+        spring_array = np.array(self.spring_list)
+        start_idxs = spring_array[:, 1].astype(np.int)
+        end_idxs = spring_array[:, 2].astype(np.int)
+        diff_idxs = end_idxs - start_idxs
+        condensin_spring_indexes = diff_idxs != 1
+        return condensin_spring_indexes
