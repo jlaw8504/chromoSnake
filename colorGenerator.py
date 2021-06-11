@@ -10,9 +10,10 @@ class ChromoSim:
             print(err)
         self.filepath = filepath
         self.mass_list, self.spring_list, self.hinge_list = self.parse_header()
+        self.sim_dict = self.parse_timepoints()
         self.super_bool_array = self.get_super_masses()
         self.condensin_spring_indexes, self.cohesin_masses_array = self.get_smc_springs_masses()
-        self.mass_labels = self.gen_mass_labels
+        self.mass_labels = self.gen_mass_labels()
 
     def parse_header(self):
         import re
@@ -77,7 +78,7 @@ class ChromoSim:
         if SUPER_MASS is not None and SUPER_MASS.dtype.name == 'float64':
             super_masses = mass_masses == SUPER_MASS
         else:
-            super_bool_array= mass_masses == mass_masses.max()
+            super_bool_array = mass_masses == mass_masses.max()
 
         return super_bool_array
 
@@ -101,7 +102,7 @@ class ChromoSim:
         cohesin_masses_array = np.zeros((16, mass_array.shape[1], cohesin_springs_start_end_idx.shape[0]),
                                         dtype=mass_array.dtype)
         for i, (end, start) in enumerate(cohesin_springs_start_end_idx):
-            cohesin_ring = mass_array[start:end+1, :]
+            cohesin_ring = mass_array[start:end + 1, :]
             cohesin_masses_array[:, :, i] = cohesin_ring
 
         return condensin_spring_indexes, cohesin_masses_array
@@ -125,9 +126,9 @@ class ChromoSim:
             raise Exception("Calculated pericentromere strand lengths are not consistent.")
 
         if strand_length % 2 == 0:
-            mid_mass_indexes = super_mass_indexes[:, 0] + strand_length/2
+            mid_mass_indexes = super_mass_indexes[:, 0] + strand_length / 2
         else:
-            mid_mass_indexes = super_mass_indexes[:, 0] + np.floor(strand_length/2)
+            mid_mass_indexes = super_mass_indexes[:, 0] + np.floor(strand_length / 2)
 
         # pair strands for C-loop indexing
         top_list = []
@@ -135,7 +136,8 @@ class ChromoSim:
         for pair in super_mass_indexes:
             mid_bool = np.logical_and(mid_mass_indexes > pair[0], mid_mass_indexes < pair[1])
             top_half_indexes = [top for top in range(pair[0], mid_mass_indexes[mid_bool].astype(np.int)[0])]
-            bottom_half_indexes = [bottom for bottom in range(mid_mass_indexes[mid_bool].astype(np.int)[0], pair[1]+1)]
+            bottom_half_indexes = [bottom for bottom in
+                                   range(mid_mass_indexes[mid_bool].astype(np.int)[0], pair[1] + 1)]
             top_list.append(top_half_indexes)
             bottom_list.append(bottom_half_indexes)
         top_array = np.array(top_list)
@@ -151,7 +153,7 @@ class ChromoSim:
         c_loop_pair_list = []
         for i, index in enumerate(super_mass_indexes[:, 0]):
             ref_xy = mass_array[index, 3:5].astype(np.float)
-            dist_array = np.sum((super_mass_ends - ref_xy)**2, axis=1)
+            dist_array = np.sum((super_mass_ends - ref_xy) ** 2, axis=1)
             dist_array[0 == dist_array] = np.nan
             c_loop_pair_list.append([i, np.nanargmin(dist_array)])
 
@@ -191,10 +193,51 @@ class ChromoSim:
                     if i in index_list:
                         if loop_index % 2 == 0:
                             position = 'top'
-                            chromosome = loop_index/2 + 1
+                            chromosome = loop_index / 2 + 1
                         else:
                             position = 'bottom'
-                            chromosome = (loop_index-1)/2 + 1
+                            chromosome = (loop_index - 1) / 2 + 1
                 mass_labels.append('chr' + str(int(chromosome)) + '_' + position)
 
         return mass_labels
+
+    def parse_timepoints(self):
+        """
+        Generate a simulation dictionary of time-points and mass positions
+        params : self
+        outputs : sim_dict
+        """
+        import re
+        # regexp patterns
+        timeline_pattern = re.compile('^Time ')
+        # toggles
+        in_timeline = False
+        # instantiate sim_dict
+        sim_dict = dict()
+        # get number of masses (must parse header prior to this)
+        num_masses = len(self.mass_list)
+        with open(self.filepath) as f:
+            for line in f:
+                line = line.strip()
+                timeline_match = timeline_pattern.match(line)
+                if timeline_match and not in_timeline:
+                    # this is the first time line
+                    in_timeline = True
+
+                if timeline_match and in_timeline:
+                    # store the time
+                    time = line.strip().split()[-1]
+                    mass_cnt = 0
+                    sim_dict[time] = dict()
+
+                if not timeline_match and in_timeline:
+                    mass_idx = num_masses - 1 - mass_cnt  # must flip cnt to get index to match header
+                    x_string, y_string, z_string = line.strip().split()
+                    sim_dict[time][mass_cnt] = {
+                        'x': x_string,
+                        'y': y_string,
+                        'z': z_string
+                    }
+                    mass_cnt += 1
+        f.close()
+        return sim_dict
