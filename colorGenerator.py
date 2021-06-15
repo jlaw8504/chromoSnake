@@ -10,10 +10,10 @@ class ChromoSim:
             print(err)
         self.filepath = filepath
         self.mass_list, self.spring_list, self.hinge_list = self.parse_header()
-        self.sim_dict = self.parse_timepoints()
         self.super_bool_array = self.get_super_masses()
         self.condensin_spring_indexes, self.cohesin_masses_array = self.get_smc_springs_masses()
         self.mass_labels = self.gen_mass_labels()
+        self.sim_dict = self.parse_timepoints()
 
     def parse_header(self):
         import re
@@ -205,7 +205,7 @@ class ChromoSim:
         """
         Generate a simulation dictionary of time-points and mass positions
         params : self
-        outputs : sim_dict
+        outputs : sim_dict : A dictionary of dictionaries containing mass positions for each timepoint
         """
         import re
         # regexp patterns
@@ -230,13 +230,14 @@ class ChromoSim:
                     mass_cnt = 0
                     sim_dict[time] = dict()
 
-                if not timeline_match and in_timeline:
+                if not timeline_match and in_timeline and line:
                     mass_idx = num_masses - 1 - mass_cnt  # must flip cnt to get index to match header
                     x_string, y_string, z_string = line.strip().split()
                     sim_dict[time][mass_cnt] = {
                         'x': x_string,
                         'y': y_string,
-                        'z': z_string
+                        'z': z_string,
+                        'label': self.mass_labels[mass_idx]
                     }
                     mass_cnt += 1
         f.close()
