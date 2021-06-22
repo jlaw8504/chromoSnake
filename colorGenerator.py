@@ -109,8 +109,8 @@ class ChromoSim:
 
     def gen_mass_labels(self):
         """
-        Create a list of labels for each mass in a simulation. Masses can be "super", "dna", "cohesin", "condensin", or
-        "middle."
+        Create a list of labels for each mass in a simulation. Masses can be "super", "chrX_top", "chrX_bottom", or
+        cohesin_X where X is a chromatid or complex index number
         params: self
         returns: A list of labels for each mass in a simulation
         """
@@ -183,11 +183,18 @@ class ChromoSim:
         # create strand, cohesin, condensin-bound, and super mass labels
 
         mass_labels = []
+        coh_cnt = 0
+        coh_idx = 0
         for i, _ in enumerate(self.mass_list):
             if i in super_mass_indexes:
                 mass_labels.append('super')
             elif i in cohesin_mass_indexes:
-                mass_labels.append('cohesin')
+                mass_labels.append('cohesin_' + str(coh_idx))
+                coh_cnt += 1
+                if coh_cnt == 16:
+                    coh_cnt = 0
+                    coh_idx += 1
+
             else:
                 for loop_index, index_list in enumerate(c_loop_indexes):
                     if i in index_list:

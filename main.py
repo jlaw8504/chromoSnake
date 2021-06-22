@@ -19,7 +19,8 @@ for mass_idx in time_dict:
         mass_coords = list(map(np.float, mass_coords))
         mass_array = np.array(mass_coords) * 10**9
         cohesin_array = np.vstack((cohesin_array, mass_array))
-
+cohesin_array[np.argsort(cohesin_array[:, 2], axis=0), :]
+cohesin_array[np.argsort(cohesin_array[:, 1], axis=0), :]
 fig = plt.figure()
 ax = Axes3D(fig)
 ax.scatter(cohesin_array[:, 0], cohesin_array[:, 1], cohesin_array[:, 2])

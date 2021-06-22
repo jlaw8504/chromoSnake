@@ -1,31 +1,15 @@
+# HARD-CODED VARIABLES
+chromoSnake_dir_path = ''
+simulation_file_path = ''
+render_dir_path = ''
+
 import sys
+sys.path.append(chromoSnake_dir_path)
+import os
 import bpy
 import numpy as np
 from colorsys import hsv_to_rgb
-
-sys.path.append('/home/test/PycharmProjects/chromoSnake/')
 import colorGenerator as cG
-
-print('Starting sim loading...')
-mySim = cG.ChromoSim('/home/test/Documents/chromoShake/varLp/5nm_trim.out')
-print('Sim loaded')
-
-top_mat_list = []
-bottom_mat_list = []
-for i in range(1, 17):
-    h = 0.4 + (0.5 * (i % 2)) + (1 / 15) * i
-    rgb = hsv_to_rgb(h, 0.85, 1)
-    rgba = (rgb[0], rgb[1], rgb[2], 1)
-    mat = bpy.data.materials.new('Material.' + str(i))
-    mat.diffuse_color = rgba
-    top_mat_list.append(mat)
-    # complementary color section
-    comp_h = h + 0.5
-    comp_rgb = hsv_to_rgb(comp_h, 0.85, 1)
-    comp_rgba = (comp_rgb[0], comp_rgb[1], comp_rgb[2], 1)
-    comp_mat = bpy.data.materials.new('Comp_Material.' + str(i))
-    comp_mat.diffuse_color = comp_rgba
-    bottom_mat_list.append(comp_mat)
 
 
 def parse_mass_coords(time_dict, mass_key):
@@ -86,52 +70,75 @@ def parse_coord_list(sim, time_str, label_str):
     return coord_list
 
 
-# keep labels for later
-label_list = []
+# parse simname
+sim_path_tuple = os.path.split(simulation_file_path)
+sim_name_tuple = os.path.splitext(sim_path_tuple[-1])
+sim_basename = sim_name_tuple[0]
+
+# import simulation
+print('Starting sim loading...')
+mySim = cG.ChromoSim(simulation_file_path)
+print('Sim loaded')
+
+# generate labels
+dna_label_list = []
 # iterate through all position labels
 for i in range(1, 17):
     for position in ['top', 'bottom']:
         my_label = 'chr{0}_{1}'.format(str(i), position)
-        label_list.append(my_label)
-        my_coord_list = parse_coord_list(mySim, '0', my_label)
-        # make a new curve
-        crv = bpy.data.curves.new(my_label, 'CURVE')
-        crv.dimensions = '3D'
+        dna_label_list.append(my_label)
 
-        # make a new spline in that curve
-        spline = crv.splines.new(type='NURBS')
+coh_label_list = [mySim.sim_dict['0'][mass_key]['label']
+                  for mass_key in mySim.sim_dict['0']
+                  if 'cohesin' in mySim.sim_dict['0'][mass_key]['label']]
 
-        # a spline point for each point
-        spline.points.add(len(my_coord_list) - 1)  # theres already one point by default
+# append cohesin complex labels to label_list
+coh_label_set = set(coh_label_list)
+label_list = dna_label_list + list(coh_label_set)
 
-        # assign the point coordinates to the spline points
-        for p, new_co in zip(spline.points, my_coord_list):
-            p.co = (new_co + [1.0])  # (add nurbs weight)
+# make cohesin material
+coh_mat = bpy.data.materials.new('Material.cohesin')
+coh_mat.diffuse_color = (1, 1, 1, 1)
 
-        # make a new object with the curve
-        obj = bpy.data.objects.new(my_label, crv)
-        bpy.context.scene.collection.objects.link(obj)
-        bpy.data.objects[my_label].data.bevel_depth = 0.005
-        # generate and assign material
+for my_label in label_list:
+    my_coord_list = parse_coord_list(mySim, '0', my_label)
+    # make a new curve
+    crv = bpy.data.curves.new(my_label, 'CURVE')
+    crv.dimensions = '3D'
 
-        if 'top' in my_label:
-            h = 0.4 + (0.5 * (i % 2)) + (1 / 15) * i
-        elif 'bottom' in my_label:
-            h = (0.4 + (0.5 * (i % 2)) + (1 / 15) * i) + 0.5  # for comp color
+    # make a new spline in that curve
+    spline = crv.splines.new(type='NURBS')
 
-        rgb = hsv_to_rgb(h, 0.85, 1)
-        rgba = (rgb[0], rgb[1], rgb[2], 1)
-        mat = bpy.data.materials.new('Material.' + str(i))
-        mat.diffuse_color = rgba
-        bpy.data.objects[my_label].active_material = mat
+    # a spline point for each point
+    spline.points.add(len(my_coord_list) - 1)  # theres already one point by default
 
-# iterate over time to create animation
-scene = bpy.context.scene
-scene.frame_start = 1
-scene.frame_end = len(mySim.sim_dict)
+    # assign the point coordinates to the spline points
+    for p, new_co in zip(spline.points, my_coord_list):
+        p.co = (new_co + [1.0])  # (add nurbs weight)
+
+    # make a new object with the curve
+    obj = bpy.data.objects.new(my_label, crv)
+    bpy.context.scene.collection.objects.link(obj)
+    bpy.data.objects[my_label].data.bevel_depth = 0.005
+    # generate and assign material
+    if 'cohesin' in my_label:
+        bpy.data.objects[my_label].active_material = coh_mat
+        continue
+
+    if 'top' in my_label:
+        idx = int(my_label.split('chr')[-1].split('_')[0])
+        h = 0.4 + (0.5 * (idx % 2)) + (1 / 15) * idx
+    elif 'bottom' in my_label:
+        idx = int(my_label.split('chr')[-1].split('_')[0])
+        h = (0.4 + (0.5 * (idx % 2)) + (1 / 15) * idx) + 0.5  # for comp color
+
+    rgb = hsv_to_rgb(h, 0.85, 1)
+    rgba = (rgb[0], rgb[1], rgb[2], 1)
+    mat = bpy.data.materials.new('Material.' + str(i))
+    mat.diffuse_color = rgba
+    bpy.data.objects[my_label].active_material = mat
 
 for i, key in enumerate(mySim.sim_dict.keys()):
-    scene.frame_set(i)
     time_dict = mySim.sim_dict[key]
     for my_label in label_list:
         # select existing spline in blender
@@ -143,7 +150,5 @@ for i, key in enumerate(mySim.sim_dict.keys()):
         for point, coord in zip(points, my_coord_list):
             for idx in range(3):
                 point.co[idx] = coord[idx]
-
-            point.keyframe_insert(data_path='co')
-
-    print('Frame {0} completed...'.format(i))
+    bpy.context.scene.render.filepath = render_dir_path + sim_basename + '_' + str(i).zfill(4)
+    bpy.ops.render.render(write_still=True)
