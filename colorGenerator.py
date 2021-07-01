@@ -1,9 +1,15 @@
+import numpy as np
+import re
+from math import sqrt
+
+
 class ChromoSim:
     """
     A class containing a reference to a chromoShake simulation
     """
 
     def __init__(self, filepath, SUPER_MASS=None):
+        self.SUPER_MASS = SUPER_MASS
         try:
             open(filepath)
         except IOError as err:
@@ -16,7 +22,6 @@ class ChromoSim:
         self.sim_dict = self.parse_timepoints()
 
     def parse_header(self):
-        import re
         # set of toggles
         in_meta = True
         in_struct = False
@@ -64,19 +69,18 @@ class ChromoSim:
                     break
         return mass_list, spring_list, hinge_list
 
-    def get_super_masses(self, SUPER_MASS=None):
+    def get_super_masses(self):
         """
         Identify super masses
         params:
             super_mass : A numpy double constant
         returns: A numpy array of boolean values to index mass_list
         """
-        import numpy as np
 
         mass_array = np.array(self.mass_list)
         mass_masses = mass_array[:, 2].astype(np.double)
-        if SUPER_MASS is not None and SUPER_MASS.dtype.name == 'float64':
-            super_masses = mass_masses == SUPER_MASS
+        if self.SUPER_MASS is not None and self.SUPER_MASS.dtype.name == 'float64':
+            super_masses = mass_masses == self.SUPER_MASS
         else:
             super_bool_array = mass_masses == mass_masses.max()
 
@@ -88,7 +92,6 @@ class ChromoSim:
         params: None
         returns: A numpy array of boolean values to index spring_list
         """
-        import numpy as np
 
         spring_array = np.array(self.spring_list)
         start_idxs = spring_array[:, 1].astype(np.int)
@@ -114,7 +117,6 @@ class ChromoSim:
         params: self
         returns: A list of labels for each mass in a simulation
         """
-        import numpy as np
 
         # super massive masses
         super_mass_indexes = np.array(np.where(self.super_bool_array))
@@ -214,7 +216,7 @@ class ChromoSim:
         params : self
         outputs : sim_dict : A dictionary of dictionaries containing mass positions for each timepoint
         """
-        import re
+
         # regexp patterns
         timeline_pattern = re.compile('^Time ')
         # toggles
@@ -249,3 +251,52 @@ class ChromoSim:
                     mass_cnt += 1
         f.close()
         return sim_dict
+
+    def calc_tension(self):
+        """
+        Calculates the tension on each mass per timepoint and appends tension to sim_dict
+        params: self
+        returns : updated sim_dict
+        """
+
+        def calc_paired_distance(time_dict, mass_idx1, mass_idx2):
+            """
+            Parse the time_dict with mass_idx1 and mass_idxs vars to calculate distance between 2 masses
+            """
+            x1 = time_dict[mass_idx1]['x']
+            x2 = time_dict[mass_idx2]['x']
+            y1 = time_dict[mass_idx1]['y']
+            y2 = time_dict[mass_idx2]['y']
+            z1 = time_dict[mass_idx1]['z']
+            z2 = time_dict[mass_idx2]['z']
+            return sqrt(
+                (float(x1) - float(x2)) ** 2 +
+                (float(y1) - float(y2)) ** 2 +
+                (float(z1) - float(z2)) ** 2
+            )
+
+        for time_key in self.sim_dict:
+            my_time_dict = self.sim_dict[time_key]
+            idx_tension_list = []
+            for line_list in self.spring_list:
+                idx1 = int(line_list[1])
+                idx2 = int(line_list[2])
+                distance = calc_paired_distance(my_time_dict, idx1, idx2)
+                rest_length = float(line_list[3])
+                spring_const = float(line_list[4])
+                tension = (distance - rest_length) * spring_const
+                idx_tension_list.append([idx1, idx2, tension])
+            idx_tension_array = np.array(idx_tension_list)
+            for mass_key in my_time_dict:
+                mass_array_1 = idx_tension_array[idx_tension_array[:, 0] == mass_key, :]
+                mass_array_2 = idx_tension_array[idx_tension_array[:, 1] == mass_key, :]
+                if mass_array_1.size > 0 and mass_array_2.size > 0:
+                    mass_tension = (mass_array_1[0, -1] + mass_array_2[0, -1]) / 2.0
+                elif mass_array_1.size == 0 and mass_array_2.size > 0:
+                    mass_tension = mass_array_2[0, -1]
+                elif mass_array_1.size > 0 and mass_array_2.size == 0:
+                    mass_tension = mass_array_1[0, -1]
+                else:
+                    raise Exception("Could not find mass {0} in idx_tension_array".format(mass_key))
+                self.sim_dict[time_key][mass_key]['tension'] = mass_tension
+        return self
