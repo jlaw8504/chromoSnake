@@ -18,8 +18,7 @@ class ChromoSim:
         self.mass_list, self.spring_list, self.hinge_list = self.parse_header()
         self.super_bool_array = self.get_super_masses()
         self.condensin_spring_indexes, self.cohesin_masses_array = self.get_smc_springs_masses()
-        self.mass_labels = self.gen_mass_labels()
-        self.sim_dict = self.parse_timepoints()
+        self.mass_labels, self.loop_labels = self.gen_mass_labels()
 
     def parse_header(self):
         # set of toggles
@@ -185,9 +184,23 @@ class ChromoSim:
         # create strand, cohesin, condensin-bound, and super mass labels
 
         mass_labels = []
+        loop_labels = []
+        in_axis = True
         coh_cnt = 0
         coh_idx = 0
         for i, _ in enumerate(self.mass_list):
+            # first, label as axis or loop
+            if i in condensin_mass_indexes and in_axis:
+                in_axis = False
+            elif i in condensin_mass_indexes and not in_axis:
+                in_axis = True
+
+            if in_axis:
+                loop_labels.append(False)
+            else:
+                loop_labels.append(True)
+
+            # label super vs cohesin
             if i in super_mass_indexes:
                 mass_labels.append('super')
             elif i in cohesin_mass_indexes:
@@ -208,7 +221,7 @@ class ChromoSim:
                             chromosome = (loop_index - 1) / 2 + 1
                 mass_labels.append('chr' + str(int(chromosome)) + '_' + position)
 
-        return mass_labels
+        return mass_labels, loop_labels
 
     def parse_timepoints(self):
         """
