@@ -6,7 +6,7 @@ from datetime import datetime
 import numpy as np
 
 start = datetime.now()
-colorSim = cG.ChromoSim('/home/test/Documents/chromoShake/varLp/500nm_trim.out')
+colorSim = cG.ChromoSim('/home/test/Documents/chromoShake/varLp/50nm_trim.out')
 colorSim.mass_labels.reverse()
 colorSim.loop_labels.reverse()
 label_bool_list = ['chr3_top' in label for label in colorSim.mass_labels]
@@ -18,7 +18,7 @@ axis_array = np.logical_and(np.logical_not(loop_array), np.logical_not(cohesin_l
 idx = axis_array
 print(datetime.now() - start)
 start = datetime.now()
-mySim = tS.TensionSim('/home/test/Documents/chromoShake/varLp/500nm_trim.out')
+mySim = tS.TensionSim('/home/test/Documents/chromoShake/varLp/50nm_trim.out')
 print(datetime.now() - start)
 
 # create the 3d axis
@@ -53,4 +53,4 @@ def scale_array(array):
 color_array = scale_array(my_array[idx, 3])
 my_scatter = ax.scatter(my_array[idx, 0], my_array[idx, 1], my_array[idx, 2], cmap='inferno', c=color_array)
 ani = FuncAnimation(fig, plot_frame, frames=time_keys_list, interval=30)
-ani.save('500nm_trim_axis.mp4')
+ani.save('50nm_trim_axis.mp4')
