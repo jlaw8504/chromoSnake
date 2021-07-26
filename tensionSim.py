@@ -102,7 +102,7 @@ class TensionSim:
                                 delta_dist = dist - rest_length
                                 tension = delta_dist * spring_k
                                 f_out.write(
-                                    '{0}, {1}, {2}, {3}, {4}, {5}, {6}\n'.format(
+                                    '{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}\n'.format(
                                         time,
                                         spring_mass_idx_1,
                                         spring_mass_idx_2,
