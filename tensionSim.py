@@ -93,7 +93,7 @@ class TensionSim:
                         # once all masses are parsed, calculate tension
                         if mass_cnt == num_masses:
                             print(f'time: {time}')
-                            for spring_list_info in my_sim_header.spring_list:
+                            for i, spring_list_info in enumerate(my_sim_header.spring_list):
                                 spring_mass_idx_1 = spring_list_info[1]
                                 spring_mass_idx_2 = spring_list_info[2]
                                 rest_length = float(spring_list_info[3])
@@ -102,7 +102,8 @@ class TensionSim:
                                 delta_dist = dist - rest_length
                                 tension = delta_dist * spring_k
                                 f_out.write(
-                                    '{0}, {1}, {2}, {3}, {4}, {5}, {6}, {7}\n'.format(
+                                    '{0},{1},{2},{3},{4},{5},{6},{7},{8}\n'.format(
+                                        i,
                                         time,
                                         spring_mass_idx_1,
                                         spring_mass_idx_2,
