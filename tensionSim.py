@@ -38,7 +38,65 @@ def parse_csv(csv_filename, equilibration_time=0.02):
         else:
             return False
 
+    def define_condensin(df):
+        """
+        Adds column condensin_type to DataFrame with values None for non-condensin springs and 'inner' and 'outer' for
+        condensin springs. DataFrame MUST have loop_size column.
+        """
+        # append condensin type column to data frame
+        df.loc[:, 'condensin_type'] = pd.Series([None] * df.shape[0], index=df.index)
+
+        chromosome_list = [f'chr{i}_' for i in range(1, 17)]
+        for chromosome in chromosome_list:
+            df_temp = df.loc[
+                    (
+                            (df.mass_label_1.str.match('super')) &
+                            (df.mass_label_2.str.contains(chromosome))
+                    ) |
+                    (
+                            (df.mass_label_1.str.contains(chromosome)) &
+                            (df.mass_label_2.str.match('super'))
+                    )
+                ]
+            mass_index_list = list(df_temp.spring_mass_idx_1) + list(df_temp.spring_mass_idx_2)
+            mass_index_list.sort()
+            strand_1_range = range(mass_index_list[0], mass_index_list[3] + 1)
+            strand_2_range = range(mass_index_list[4], mass_index_list[7] + 1)
+            df_chr_size_condensin = df.loc[
+                (
+                        df.mass_label_1.str.contains(chromosome) &
+                        df.mass_label_2.str.contains(chromosome) &
+                        df.is_condensin_spring
+                )
+                ]
+            strand_1_list = []
+            strand_2_list = []
+            for i, spring_index in zip(df_chr_size_condensin.spring_mass_idx_1, df_chr_size_condensin.index):
+                if i in strand_1_range:
+                    strand_1_list.append(spring_index)
+                elif i in strand_2_range:
+                    strand_2_list.append(spring_index)
+                else:
+                    raise ValueError(
+                        'Condensin spring index not found in either strand range!',
+                        i,
+                        strand_1_range,
+                        strand_2_range
+                    )
+
+            strand_1_list.sort()
+            strand_2_list.sort()
+            inner_indexes = strand_1_list[1:3] + strand_2_list[1:3]
+            outer_indexes = [strand_1_list[0], strand_1_list[-1], strand_2_list[0], strand_2_list[-1]]
+            for inner_i, outer_i in zip(inner_indexes, outer_indexes):
+                df.at[inner_i, 'condensin_type'] = 'inner'
+                df.at[outer_i, 'condensin_type'] = 'outer'
+
+        return df
+
+
     final_df['is_condensin_spring'] = final_df.apply(id_condensin, axis=1)
+    final_df = define_condensin(final_df)
     # convert the tension from N to pN
     final_df['tension_pN'] = final_df.apply(lambda x: x['tension_N'] * 10 ** 12, axis=1)
     final_df.drop(columns=['tension_N'], inplace=True)
